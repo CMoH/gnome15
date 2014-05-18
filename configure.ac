@@ -187,12 +187,20 @@ dnl udev file path and settings
 AC_ARG_VAR(UDEV_RULES_PATH, [Path for udev rules. Defaults to /lib/udev/rules.d])
 AS_IF([test -z "${UDEV_RULES_PATH}"],
 	AC_SUBST([UDEV_RULES_PATH], [/lib/udev/rules.d]))
-AC_ARG_VAR(DEVICEGROUP, [Group that the devices will be owned by. Defaults to plugdev])
+
+AC_ARG_VAR(DEVICEGROUP, [Group that the input devices will be owned by. Defaults to plugdev])
 AS_IF([test -z "${DEVICEGROUP}"],
 	AC_SUBST([DEVICEGROUP], [plugdev]))
 AC_ARG_VAR(DEVICEMODE, [Permissions of the devices. Defaults to 0660])
 AS_IF([test -z "${DEVICEMODE}"],
 	AC_SUBST([DEVICEMODE], [0660]))
+
+AC_ARG_VAR(VIDEOGROUP, [Group that the framebuffer devices will be owned by. Defaults to video])
+AS_IF([test -z "${VIDEOGROUP}"],
+	AC_SUBST([VIDEOGROUP], [video]))
+AC_ARG_VAR(VIDEOMODE, [Permissions of the framebuffer devices. Defaults to 0660])
+AS_IF([test -z "${VIDEOMODE}"],
+	AC_SUBST([VIDEOMODE], [0660]))
 
 dnl Drivers
 AC_ARG_ENABLE([driver-kernel],
@@ -1379,6 +1387,8 @@ AS_ECHO("Fixed size font name        - ${FIXED_SIZE_FONT}")
 AS_ECHO("udev rules path             - ${UDEV_RULES_PATH}")
 AS_ECHO("Device group                - ${DEVICEGROUP}")
 AS_ECHO("Device mode                 - ${DEVICEMODE}")
+AS_ECHO("Video group                 - ${VIDEOGROUP}")
+AS_ECHO("Video mode                  - ${VIDEOMODE}")
 AS_ECHO_N("Hotplugging support         - ")
 AS_IF([test "x${HAVE_PYUDEV}" = "xno"],
      [AS_ECHO("No")],
