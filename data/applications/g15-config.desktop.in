@@ -8,4 +8,3 @@ Terminal=false
 StartupNotify=true
 Type=Application
 Categories=GTK;Settings;HardwareSettings;
-OnlyShowIn=GNOME;
