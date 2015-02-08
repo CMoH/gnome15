@@ -67,30 +67,6 @@ class SystemService(dbus.service.Object):
     def SetLight(self, device, light, value):
         self._controller.devices[device].leds[light].set_led_value(value);
         
-    @dbus.service.method(IF_NAME, in_signature='sb')
-    def SetKeymapSwitching(self, device, enabled):        
-        self._controller.devices[device].set_keymap_switching(enabled)
-        
-    @dbus.service.method(IF_NAME, in_signature='s', out_signature='b')
-    def GetKeymapSwitching(self, device):        
-        self._controller.devices[device].get_keymap_switching()
-        
-    @dbus.service.method(IF_NAME, in_signature='sn')
-    def SetKeymapIndex(self, device, index):        
-        self._controller.devices[device].set_keymap_index(index)
-        
-    @dbus.service.method(IF_NAME, in_signature='s', out_signature='n')
-    def GetKeymapIndex(self, device):        
-        return self._controller.devices[device].get_keymap_index()
-        
-    @dbus.service.method(IF_NAME, in_signature='sa{tt}')
-    def SetKeymap(self, device, keymap):        
-        self._controller.devices[device].set_keymap(keymap)
-        
-    @dbus.service.method(IF_NAME, in_signature='s', out_signature='a{tt}')
-    def GetKeymap(self, device):        
-        return self._controller.devices[device].get_keymap()
-        
     @dbus.service.method(IF_NAME, in_signature='ss', out_signature='n')
     def GetLight(self, device, light):        
         return self._controller.devices[device].leds[light].get_value()
@@ -130,8 +106,8 @@ def _do_set_value(filename, value):
     try :
         fd.write("%s\n" % str(value))
     finally :
-        fd.close()            
-    
+        fd.close()
+
 class KeyboardDevice():
     def __init__(self, device, device_path, index):
         self.leds = {}
@@ -146,39 +122,7 @@ class KeyboardDevice():
             keyboard_device, index = keyboard_device.split("_")
             light_key = "%s:%s" % ( color, control )
             self.leds[light_key] = LED(light_key, self, f)
-            
-    def set_keymap_switching(self, enabled):
-        logger.info("Setting keymap switching on %s to '%s'", self.device.uid, str(enabled))
-        set_value(os.path.join(self.device_path, "keymap_switching"), 1 if enabled else 0)
-        
-    def get_keymap_switching(self):
-        return get_int_value(os.path.join(self.device_path, "keymap_switching")) == 1 
-            
-    def set_keymap_index(self, index):
-        logger.info("Setting keymap index on %s to '%d'", self.device.uid, index)
-        set_value(os.path.join(self.device_path, "keymap_index"), index)
-        
-    def get_keymap_index(self):
-        return get_int_value(os.path.join(self.device_path, "keymap_index")) 
-            
-    def set_keymap(self, keymap):
-        s = ""
-        for k in keymap:
-            s += "%04x %04x\n" % ( k, keymap[k])
-        logger.info("Setting keymap on %s to '%s'", self.device.uid, str(keymap))
-        set_value(os.path.join(self.device_path, "keymap"), s)
-        
-    def get_keymap(self):
-        val = get_value(os.path.join(self.device_path, "keymap"))
-        while val.endswith(chr(0)):
-            val = val[:-1]
-        keymap = {}
-        for line in val.splitlines():
-            args = line.split(" ")
-            keycode = int(args[0], 16)
-            scancode = int(args[1], 16)
-            keymap[keycode] = scancode
-        return keymap
+
         
 class LED():
     """

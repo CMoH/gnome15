@@ -41,6 +41,7 @@ import fb
 from PIL import Image
 from PIL import ImageMath
 import array
+import struct
 import dbus
 import gobject
 
@@ -277,12 +278,12 @@ K_KEYMAPS = {
                                    0x0013 : 228,
                                    0x0018 : S.KEY_FORWARD,
                                    0x0019 : S.KEY_BACK,
-                                   0x0020 : S.KEY_MENU,
-                                   0x0021 : S.KEY_OK,
-                                   0x0022 : S.KEY_RIGHT,
-                                   0x0023 : S.KEY_LEFT,
-                                   0x0024 : S.KEY_DOWN,
-                                   0x0025 : S.KEY_UP                                   
+                                   0x001A : S.KEY_MENU,
+                                   0x001B : S.KEY_OK,
+                                   0x001C : S.KEY_RIGHT,
+                                   0x001D : S.KEY_LEFT,
+                                   0x001E : S.KEY_DOWN,
+                                   0x001F : S.KEY_UP                                   
                                    },
              g15driver.MODEL_G15_V1: {
                                    0x00 : S.KEY_F1,
@@ -423,6 +424,63 @@ K_KEYMAPS = {
                                    
                                    },
              }
+
+# from https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/client/bin/input/linux_ioctl.py
+
+_IOC_NRBITS   = 8
+_IOC_TYPEBITS = 8
+_IOC_SIZEBITS = 14
+_IOC_DIRBITS  = 2
+
+_IOC_NRMASK   = ((1 << _IOC_NRBITS) - 1)
+_IOC_TYPEMASK = ((1 << _IOC_TYPEBITS) - 1)
+_IOC_SIZEMASK = ((1 << _IOC_SIZEBITS) - 1)
+_IOC_DIRMASK  = ((1 << _IOC_DIRBITS) - 1)
+
+_IOC_NRSHIFT   = 0
+_IOC_TYPESHIFT = (_IOC_NRSHIFT + _IOC_NRBITS)
+_IOC_SIZESHIFT = (_IOC_TYPESHIFT + _IOC_TYPEBITS)
+_IOC_DIRSHIFT  = (_IOC_SIZESHIFT + _IOC_SIZEBITS)
+
+IOC_NONE  = 0
+IOC_WRITE = 1
+IOC_READ  = 2
+
+# Return the byte size of a python struct format string
+def sizeof(t):
+    return struct.calcsize(t)
+
+def IOC(d, t, nr, size):
+    return ((d << _IOC_DIRSHIFT) | (ord(t) << _IOC_TYPESHIFT) |
+            (nr << _IOC_NRSHIFT) | (size << _IOC_SIZESHIFT))
+
+# used to create numbers
+def IO(t, nr, t_format):
+    return IOC(IOC_NONE, t, nr, 0)
+
+def IOW(t, nr, t_format):
+    return IOC(IOC_WRITE, t, nr, sizeof(t_format))
+
+def IOR(t, nr, t_format):
+    return IOC(IOC_READ, t, nr, sizeof(t_format))
+
+# from https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/client/bin/input/linux_input.py
+
+# struct input_keymap_entry {
+#   __u8 flags;
+#   __u8 len;
+#   __u16 index;
+#   __u32 keycode;
+#   __u8 scancode[32];
+# };
+input_keymap_entry_t = 'BBHI32B'
+input_keymap_entry_scancode_offset = 'BBHI'
+
+EVIOCGKEYCODE    = IOR('E', 0x04, '2I') # get keycode
+EVIOCGKEYCODE_V2 = IOR('E', 0x04, input_keymap_entry_t)
+EVIOCSKEYCODE    = IOW('E', 0x04, '2I') # set keycode
+EVIOCSKEYCODE_V2 = IOW('E', 0x04, input_keymap_entry_t)
+
 
 class DeviceInfo:
     def __init__(self, leds, controls, key_map, led_prefix, keydev_pattern, sink_pattern = None, mm_pattern = None):
@@ -1140,16 +1198,9 @@ class Driver(g15driver.AbstractDriver):
         
         # Configure the keymap
         logger.info("Grabbing current keymap settings")
-        self.keymap_index = self.system_service.GetKeymapIndex(self.device.uid)
-        self.keymap_switching = self.system_service.GetKeymapSwitching(self.device.uid)
-        self.current_keymap = self.system_service.GetKeymap(self.device.uid)
-        new_keymap = self.current_keymap.copy()
-        logger.info("Disabling keymap switching")
-        self.system_service.SetKeymapSwitching(self.device.uid, False)
-        logger.info("Resetting keymap index")        
-        self.system_service.SetKeymapIndex(self.device.uid, 0)
+        self.original_keymap = self._get_keymap()
         kernel_keymap_replacement = K_KEYMAPS[self.device.model_id]
-        self.system_service.SetKeymap(self.device.uid, kernel_keymap_replacement)
+        self._set_keymap(kernel_keymap_replacement)
               
         self.key_thread = KeyboardReceiveThread(self.device)
         for devpath in self.keyboard_devices:
@@ -1245,9 +1296,7 @@ It should be launched automatically if Gnome15 is installed correctly.")
         if self.key_thread != None:            
             # Configure the keymap
             logger.info("Resetting keymap settings back to the way they were")
-            self.system_service.SetKeymapSwitching(self.device.uid, self.keymap_switching)
-            self.system_service.SetKeymapIndex(self.device.uid, self.keymap_index)        
-            self.system_service.SetKeymap(self.device.uid, self.current_keymap)
+            self._set_keymap(self.original_keymap)
             
             self.key_thread.deactivate()
             self.key_thread = None
@@ -1262,6 +1311,49 @@ It should be launched automatically if Gnome15 is installed correctly.")
     def _write_to_led(self, name, value):
         gobject.idle_add(self._do_write_to_led, name, value)
 
+    def _set_keymap(self, keymap):
+        for devpath in self.keyboard_devices:
+            logger.debug("Setting keymap on device %s", devpath)
+            fd = open(devpath, "rw")
+            try:
+                buf = array.array('B', [0] * sizeof(input_keymap_entry_t))
+                for scancode, keycode in keymap.items():
+                    struct.pack_into(input_keymap_entry_t, buf, 0,
+                                     0, # flags
+                                     sizeof('I'), # len
+                                     0, # index
+                                     keycode, # keycode
+                                     *([0] * 32))
+                    struct.pack_into('I', buf, sizeof(input_keymap_entry_scancode_offset), scancode)
+
+                    fcntl.ioctl(fd, EVIOCSKEYCODE_V2, buf)
+                    logger.debug("   key %d := %d", scancode, keycode)
+            finally:
+                fd.close()
+
+    def _get_keymap(self):
+        for devpath in self.keyboard_devices:
+            logger.debug("Getting keymap from device %s", devpath)
+            fd = open(devpath, "rw")
+            try:
+                keymap = K_KEYMAPS[self.device.model_id].copy()
+                buf = array.array('B', [0] * sizeof(input_keymap_entry_t))
+                for scancode in keymap:
+                    struct.pack_into(input_keymap_entry_t, buf, 0,
+                                     0, # flags
+                                     sizeof('I'), # len
+                                     0, # index
+                                     S.KEY_RESERVED, # keycode
+                                     *([0] * 32))
+                    struct.pack_into('I', buf, sizeof(input_keymap_entry_scancode_offset), scancode)
+
+                    fcntl.ioctl(fd, EVIOCGKEYCODE_V2, buf)
+                    keymap[scancode] = struct.unpack(input_keymap_entry_t, buf)[3]
+                    logger.debug("   key %d = %d", scancode, keymap[scancode])
+                return keymap
+            finally:
+                fd.close()
+        return None
     
     def _handle_bound_key(self, key):
         logger.info("G key - %d", key)
