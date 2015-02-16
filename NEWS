@@ -1,4 +1,4 @@
-gnome15 0.9.8 (2013-11-11)
+gnome15 0.10.0 (2015-02-16)
 ==========================
 
 Gnome15 is a suite of tools for the Logitech G series keyboards and
@@ -21,14 +21,24 @@ KDE.
 About this release
 ------------------
 
-Release 0.9.8 is mainly a bug fix release with some enhancements and a
-new plugin.
+Release 0.10.0 is a major release because of the changes to the kernel
+driver, which makes it incopatible with the 0.9.x series.
+
+So, users wanting to stick with gnome15-0.9.x should use branch `pre-refactor`
+of the kernel drivers found at https://github.com/CMoH/lg4l, while 
+gnome15-0.10.x would rely on branch `master`.
+
+Also, this rather unofficial release is made outside russo79.com, since
+the website is down for quite a while. The rest of the release is the same
+as 0.9.8.
+
 A new "Pommodoro Timer" plugin is now available.
 The Gnome shell extension now supports Gnome 3.10
 
 Changes since 0.9.7
 -------------------
 
+* Break compatibility with old kernel module implementation.
 * The Gnome Shell extension now displays the plugin list in
   alphabetical order. (https://projects.russo79.com/issues/172)
 * A new "Pommodoro Timer" plugin is now available.
