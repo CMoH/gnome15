@@ -1,4 +1,4 @@
-gnome15 0.10.0 (2015-02-16)
+gnome15 0.10.1 (2015-03-02)
 ==========================
 
 Gnome15 is a suite of tools for the Logitech G series keyboards and
@@ -34,6 +34,12 @@ as 0.9.8.
 
 A new "Pommodoro Timer" plugin is now available.
 The Gnome shell extension now supports Gnome 3.10
+
+Changes since 0.10.0
+--------------------
+
+* driver_kernel: fix keymaps for G110 and G15v2
+
 
 Changes since 0.9.7
 -------------------
