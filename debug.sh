@@ -7,4 +7,4 @@ if [ $# -eq 0 ]; then
 else
   args=$@
 fi
-src/scripts/g15-desktop-service -f -l INFO $args
+src/scripts/g15-desktop-service -f -l DEBUG $args
