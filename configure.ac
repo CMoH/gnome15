@@ -17,7 +17,7 @@ AC_PROG_CC
 
 dnl Python
 AM_PATH_PYTHON
-AX_PYTHON_DEVEL([2.6])
+AX_PYTHON_DEVEL([>= '2.6'])
 
 dnl Python modules (mandatory)
 PKG_CHECK_MODULES(PYGTK, pygtk-2.0)
