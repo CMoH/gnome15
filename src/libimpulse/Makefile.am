@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libimpulse.la
 libimpulse_la_SOURCES = Impulse.c
 libimpulse_la_CFLAGS = ${PULSE_CFLAGS} ${FFTW_CFLAGS}
-libimpulse_la_LDFLAGS = -version-info 1:0:1 -no-undefined -pthread -shared -Wl ${PULSE_LIBS} ${FFTW_LIBS}, -fPIC
+libimpulse_la_LDFLAGS = -version-info 1:0:1 -no-undefined -pthread -shared -Wl ${PULSE_LIBS} ${FFTW_LIBS} -fPIC
 
 pyexec_LTLIBRARIES = impulse.la
 impulse_la_SOURCES = impulsemodule.c
